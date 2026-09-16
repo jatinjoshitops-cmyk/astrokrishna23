@@ -155,3 +155,98 @@ bugs, image coverage, and the reported spacing issue. Found and fixed:
 All re-verified after the changes: 0 HTML parse errors, 0 broken links, 0 JS
 errors, 0 element-level overflow across 286 checks (26 pages × 11 widths),
 and all 22 content pages still clear 1,000+ words excluding review text.
+
+## Fifth pass — structural corruption found and repaired
+
+The issues reported from the live site all traced back to damage my own earlier
+repair scripts had done to the HTML. Specifically:
+
+1. **5 files contained two spliced-together HTML documents** — a truncated
+   partial document followed by a complete one, plus an image placeholder
+   containing the literal text `None`. Caused by a repair script that formatted
+   a Python `None` into markup and re-emitted the document. Fixed by extracting
+   and validating the intact second copy (verified: 8 sections, 20 testimonials,
+   10 FAQs, correct head/body) and discarding the corrupt remainder.
+   Affected: black-magic-expert-bardoli/-surat, love-problem-solution-surat,
+   vashikaran-expert-bardoli/-surat.
+
+2. **8 files had a `.content-split` outside its `.container`** — the opening
+   `<div class="content-split"><div class="content-text">` wrappers were
+   missing, so a stray `</div>` closed the container early. Everything after it
+   rendered full-bleed: images spanning the entire viewport and text starting at
+   x=0 with no padding. This was the giant-image / text-at-screen-edge problem.
+
+3. **3 files had `.card-grid` trapped inside `.section-head`** — a missing
+   `</div>` meant the service-card grid inherited `max-width: 62ch`, rendering
+   the grid at 552px inside an 1180px container. That was the "slim service
+   section" with cards squeezed to 165px wide.
+
+### Design changes in this pass
+- Homepage "Understanding Vedic Astrology" converted from a single narrow text
+  column (605px of text in an 1180px container, right half empty) into two
+  alternating image/text rows using `.content-split` and `.content-split.img-left`.
+- Content images retuned from 4:3 to 3:2 with `max-height: 300px`, so a
+  placeholder no longer dominates its section on wide screens.
+- Added `.content-split + .content-split { margin-top: var(--space-lg); }` so
+  stacked rows breathe.
+- Added `.content-split.img-left > .content-image { order: 1; }` — the img-left
+  modifier previously only reordered the text, which left ordering ambiguous.
+
+### Verification for this pass
+- 390 overflow checks (26 pages × 15 widths, 320px → 2560px): 0 flagged.
+- Structural DOM audit: 0 escaped content-splits, 0 malformed splits, 0
+  elements bleeding to the viewport edge.
+- Mobile hamburger open/close tested programmatically on all 26 pages: works
+  on every one. **If it fails on the live site, the deployment is stale** —
+  redeploy from the current zip.
+- 0 HTML parse errors, 0 broken links, 0 duplicated documents, 0 `None`
+  placeholders, all 22 content pages still 1,000+ words excluding reviews.
+
+## Sixth pass — new services, alternating layout, 32 pages
+
+### Layout: alternating image placement
+Content rows previously all placed the image on the right, which read as
+repetitive down a page. Image placement now alternates automatically
+(`.content-split` / `.content-split.img-left`) across each page's `<main>`.
+34 rows flipped across 21 pages. `.content-split.img-left > .content-image`
+also got an explicit `order: 1` so the swap is unambiguous.
+
+### New services with dedicated pages (6 new pages — site is now 32)
+- tantra-mantra-yantra.html + -bardoli + -surat
+- vastu-shastra.html + -bardoli + -surat
+
+Each: 1,100–1,340 words excluding reviews, 10 unique FAQs, 10 unique sample
+testimonials (duplicated in markup for the marquee loop), 6 image placeholders.
+Written to match the existing house style — no outcome guarantees, remedies
+explained before being asked for, and honest "no remedy needed" framing where
+that applies. The Tantra page deliberately avoids ritual instructions and
+covers only mantra recitation, yantra placement and the traditional method
+around them.
+
+Added to the header nav, footer, sitemap.xml, and the service card grids on
+index, services, and both city hubs.
+
+### New services listed only (no dedicated page)
+New `Also Available at Krishna Astro` section on index, services and both
+city hubs, listing: Husband Wife Problem Solution, Divorce Problem Solution,
+Court Case Problem Solution, Palm & Face Reading, Vedic Aghori & Tantrik.
+Uses a new `.service-list` component.
+
+### New `.section--tint` band colour
+Adding a section broke strict light/dark alternation on four pages. Rather
+than shuffling which section is which colour, a third band colour was added
+(`.section--tint`, a warm gradient) so an inserted section never repeats
+whichever neighbour it lands next to. Policy pages also got a sand body
+section so they aren't white-on-white.
+
+### Verification for this pass
+- **608 responsive checks** — 32 pages × 19 widths (320, 360, 375, 390, 414,
+  480, 540, 600, 768, 820, 912, 1024, 1180, 1280, 1366, 1440, 1600, 1920,
+  2560): **0 overflow**.
+- Adjacent-background repeats: 0 (comparing background-color *and*
+  background-image, since the tint band is a gradient and reads as
+  transparent on background-color alone).
+- Structural DOM audit: 0 escaped content-splits, 0 malformed splits.
+- Mobile nav open/close tested on all 32 pages: works on every one.
+- 0 HTML parse errors, 0 broken links, 0 duplicated documents, 0 pages under
+  1,000 words excluding reviews, canonical tags on all 32.
